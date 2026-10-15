@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from demo.run_end_to_end_demo import verify_committed_snapshot
 from demo.serving.feature_store_api import (
     build_dataset_view,
     frame_records,
@@ -78,6 +79,12 @@ class DemoServingTest(unittest.TestCase):
             self.assertEqual("not_available", read_run_report(path)["status"])
             path.write_text(json.dumps({"status": "success"}), encoding="utf-8")
             self.assertEqual("success", read_run_report(path)["status"])
+
+    def test_committed_demo_snapshot_is_self_consistent(self) -> None:
+        summary = verify_committed_snapshot()
+        self.assertEqual("passed", summary["status"])
+        self.assertEqual(1_000, summary["expected_count"])
+        self.assertTrue(all(summary["checks"].values()))
 
 
 if __name__ == "__main__":

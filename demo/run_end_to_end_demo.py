@@ -34,6 +34,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--count", type=int, default=1_000)
     parser.add_argument("--bootstrap-servers", default="localhost:9092")
     parser.add_argument("--skip-docker-start", action="store_true")
+    parser.add_argument(
+        "--verify-snapshot-only",
+        action="store_true",
+        help="Verify the committed input, Parquet, and result files without Docker.",
+    )
     parser.add_argument("--serve", action="store_true", help="Start the dashboard after the run.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8077)
@@ -88,12 +93,54 @@ def collect_feature_files(stage: dict[str, Any]) -> list[Path]:
     return files
 
 
+def verify_committed_snapshot() -> dict[str, Any]:
+    """Validate the small public evidence bundle without external services."""
+    input_count = sum(1 for line in SOURCE_FILE.read_text(encoding="utf-8").splitlines() if line.strip())
+    run_result = json.loads(RESULT_FILE.read_text(encoding="utf-8"))
+    serving_view = build_dataset_view(OUTPUT_FILE)
+    counts = run_result.get("counts", {})
+    expected_count = int(run_result.get("requested_count", 0))
+    pipeline_counts = [
+        int(counts.get(name, -1))
+        for name in (
+            "input",
+            "producer_sent",
+            "consumer_received",
+            "pyflink_input",
+            "parquet_saved",
+            "serving_read",
+        )
+    ]
+    checks = {
+        "successful_recorded_run": run_result.get("status") == "success",
+        "input_matches_expected": input_count == expected_count,
+        "pipeline_counts_match": bool(expected_count)
+        and all(count == expected_count for count in pipeline_counts),
+        "parquet_matches_expected": int(serving_view["row_count"]) == expected_count,
+        "no_duplicate_timestamps": int(serving_view["duplicate_timestamps"]) == 0,
+        "no_missing_required_values": int(serving_view["missing_required_values"]) == 0,
+    }
+    summary = {
+        "status": "passed" if all(checks.values()) else "failed",
+        "mode": "committed_snapshot_verification",
+        "external_services_required": False,
+        "expected_count": expected_count,
+        "checks": checks,
+    }
+    if summary["status"] != "passed":
+        raise RuntimeError(f"Committed demo snapshot verification failed: {summary}")
+    return summary
+
+
 def main() -> None:
     args = parse_args()
     if args.count < 100 or args.count > 1_000:
         raise ValueError("The short presentation demo supports 100 to 1,000 events.")
     if not SOURCE_FILE.exists():
         raise FileNotFoundError(f"Submission input sample is missing: {SOURCE_FILE}")
+    if args.verify_snapshot_only:
+        print(json.dumps(verify_committed_snapshot(), ensure_ascii=False, indent=2))
+        return
 
     execution_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     runtime_root = PROJECT_ROOT / "runtime_reports" / "portfolio_demo" / execution_id
@@ -111,8 +158,6 @@ def main() -> None:
         "requested_count": args.count,
         "pipeline": ["saved_input", "kafka", "consumer", "pyflink", "parquet", "serving_read"],
     }
-    write_json(RESULT_FILE, report)
-
     try:
         if not args.skip_docker_start:
             run(
@@ -211,7 +256,7 @@ def main() -> None:
                 "error": f"{type(exc).__name__}: {exc}",
             }
         )
-        write_json(RESULT_FILE, report)
+        write_json(runtime_root / "demo_run.json", report)
         raise
 
     if args.serve:

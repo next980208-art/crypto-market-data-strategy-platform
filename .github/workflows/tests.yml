@@ -16,5 +16,9 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Audit public repository
+        run: python scripts/audit_public_repository.py
+      - name: Compile Python sources
+        run: python -m compileall -q airflow demo examples flink_jobs realtime scripts *.py
       - name: Run unit tests
         run: python -m unittest discover -s tests

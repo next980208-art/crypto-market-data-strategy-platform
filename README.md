@@ -6,8 +6,27 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-Streaming-231F20?logo=apachekafka)
 ![Flink](https://img.shields.io/badge/Apache%20Flink-Batch%20%26%20Streaming-E6526F?logo=apacheflink)
-![Tests](https://img.shields.io/badge/tests-281%20passed-2ea44f)
+[![unit-tests](https://github.com/next980208-art/crypto-market-data-strategy-platform/actions/workflows/tests.yml/badge.svg)](https://github.com/next980208-art/crypto-market-data-strategy-platform/actions/workflows/tests.yml)
 ![Trading](https://img.shields.io/badge/live%20orders-0-blue)
+
+[빠른 실행](#11-로컬-실행) · [핵심 코드](#핵심-코드-탐색) · [검증 근거](docs/PROJECT_EVIDENCE.md) · [기술적 의사결정](docs/TECHNICAL_DECISIONS.md)
+
+## 채용 담당자를 위한 3분 요약
+
+| 질문 | 답변 |
+| --- | --- |
+| 무엇을 만들었나? | Binance 과거·실시간 데이터를 수집하여 Kafka·Flink로 처리하고, Parquet Feature Store와 전략 검증 단계까지 연결한 데이터 플랫폼 |
+| 어떤 문제를 해결했나? | 데이터 중복·누락, 배치/스트리밍 불일치, 시계열 누수, 거래비용 누락, 검증되지 않은 전략의 자동 배포 위험 |
+| 직접 구현한 범위는? | 수집기, 데이터 계약, 배치·스트리밍 작업, Airflow DAG, 연구 데이터셋, Walk-Forward 검증, 리스크 게이트, 대시보드, 테스트 |
+| 어떻게 검증했나? | 단위 테스트 282개, 데이터·안전 검사 13/13, 1,000개 이벤트 E2E 데모, 비용 조건별 독립 미래 관찰 |
+| 결과는 무엇인가? | 파이프라인은 재현 가능하게 동작했지만 전략은 미래 관찰에서 손실을 기록하여 `no_trade`로 차단 |
+| 이 프로젝트가 보여주는 역량은? | 데이터 엔지니어링, 이벤트 기반 처리, 재현 가능한 ML 검증, 실패 분석, 운영 안전성 설계 |
+
+> 이 저장소는 수익을 보장하는 자동매매 상품이 아닙니다. 검증되지 않은 전략을 실제 주문으로 보내지 않는 연구·데이터 엔지니어링 프로젝트입니다.
+
+### English overview
+
+An end-to-end crypto market data and strategy-validation platform built with Airflow, Kafka, Flink, Parquet, and Python. It focuses on reproducible data pipelines, leakage-safe walk-forward evaluation, transaction-cost modeling, and deployment gates. The current strategy failed forward observation, so the system correctly remains in `no_trade` with zero live orders.
 
 | 구분 | 내용 |
 | --- | --- |
@@ -146,7 +165,7 @@ flowchart TB
 
 | 항목 | 결과 |
 | --- | ---: |
-| 현재 단위 테스트 | **281개 통과** |
+| 현재 단위 테스트 | **282개 통과** |
 | 테스트 모듈 | 54개 |
 | 데이터·안전 품질 검사 | **13/13 통과** |
 | Kafka→Flink→Parquet 검증 실행 | 입력 1,000건 / 출력 1,000건 |
@@ -239,7 +258,7 @@ flowchart TB
 - 실시간 Kafka/Flink 스택은 온디맨드 구조이며, 최근 원천 아카이브 실행 중 Kafka bootstrap 불가 장애가 기록됐습니다.
 - 현재 관찰은 공개 REST 데이터 기반 모의 평가로 실제 주문 체결 품질을 증명하지 않습니다.
 - 단일 종목 중심 연구이므로 다른 종목과 시장 국면으로 일반화할 수 없습니다.
-- 전체 폴더에는 연구 산출물과 대용량 데이터가 포함되어 있어 공개 저장소용 경량화가 추가로 필요합니다.
+- 공개 저장소는 재현 가능한 소형 샘플만 포함하므로 전체 규모의 원천 데이터 처리 성능은 별도 환경에서 검증해야 합니다.
 
 이 한계를 근거로 현재도 주문과 자동 배포를 차단하고 있습니다.
 
@@ -268,20 +287,26 @@ live_orders: 0
 
 - 90일 미래 관찰을 끝까지 유지하고 4주·30일 단위 기준 평가
 - Kafka 서비스 장애 원인과 재시작 절차를 운영 문서로 정리
-- 작은 공개 샘플 데이터로 재현 가능한 데모 패키지 구성
-- CI에서 단위 테스트와 메타데이터 계약 검사 자동화
+- 공개 데모와 전체 스트리밍 스택의 계약 테스트 범위 확대
+- 의존성 잠금 파일과 컨테이너 이미지 버전 고정으로 재현성 강화
 - 다른 종목으로 확장하기 전에 현재 규칙의 독립 검증 결과 확정
 
 ## 11. 로컬 실행
 
 ### 빠른 데모
 
-저장소에 포함된 1,000건의 공개 샘플 데이터로 Kafka → PyFlink → Parquet → 조회 API 흐름을 재현합니다.
+먼저 저장소에 포함된 1,000건의 공개 입력, Parquet 출력과 성공 결과의 정합성을 Docker 없이 검증합니다.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python demo/run_end_to_end_demo.py --verify-snapshot-only
+```
+
+Kafka → PyFlink → Parquet → 조회 API 전체 흐름을 다시 실행하려면 Docker Desktop을 실행한 뒤 다음 명령을 사용합니다.
+
+```powershell
 python demo/run_end_to_end_demo.py
 ```
 
@@ -326,6 +351,21 @@ docker compose --profile streaming --profile realtime up -d --build
 
 대용량 원천 데이터, 모델 파일, SQLite DB, 로그와 개인 실행 환경은 공개 저장소에서 제외했습니다.
 
+### 핵심 코드 탐색
+
+| 관심 영역 | 시작 파일 | 확인할 내용 |
+| --- | --- | --- |
+| 배치 수집 | [`1_chunk_downloader.py`](1_chunk_downloader.py) | 기간 분할 다운로드, 재시도, 입력 검증 |
+| 파이프라인 오케스트레이션 | [`airflow/dags/btcusdt_daily_collection.py`](airflow/dags/btcusdt_daily_collection.py) | 일일 수집·가공 DAG와 작업 의존성 |
+| Flink 처리 | [`flink_jobs/batch_feature_job.py`](flink_jobs/batch_feature_job.py) | 이벤트를 특성 데이터로 변환하는 배치 작업 |
+| 실시간 데이터 계약 | [`realtime/contracts.py`](realtime/contracts.py) | 이벤트 스키마, 식별자와 검증 규칙 |
+| 호가창 복원 | [`realtime/depth_book.py`](realtime/depth_book.py) | 스냅샷·증분 이벤트 정합성과 재동기화 |
+| 멱등성과 복구 | [`realtime/idempotency.py`](realtime/idempotency.py) | 중복 처리 방지와 상태 관리 |
+| 리스크 게이트 | [`realtime/risk_paper_service.py`](realtime/risk_paper_service.py) | 모의 주문, 제한 조건, `no_trade` 처리 |
+| Walk-Forward 검증 | [`14_walk_forward_direction_model.py`](14_walk_forward_direction_model.py) | 시간순 학습·검증·테스트 분리 |
+| 재현 가능한 데모 | [`demo/run_end_to_end_demo.py`](demo/run_end_to_end_demo.py) | 공개 스냅샷 검증과 1,000개 이벤트 E2E 실행 |
+| 회귀 테스트 | [`tests/`](tests/) | 데이터 계약, 누수 방지, 장애·복구 검증 |
+
 ## 13. 근거 자료
 
 - [현재 미래 관찰 결과 스냅샷](examples/reports/forward_observation_snapshot.json)
@@ -333,6 +373,8 @@ docker compose --profile streaming --profile realtime up -d --build
 - [재현 가능한 E2E 데모](demo/README.md)
 - [Kafka·Flink 이벤트 예제](examples/kafka_flink/README.md)
 - [실행 결과 JSON](demo/results/latest_end_to_end_run.json)
+- [주장별 검증 근거와 재현 명령](docs/PROJECT_EVIDENCE.md)
+- [주요 기술적 의사결정과 트레이드오프](docs/TECHNICAL_DECISIONS.md)
 
 ---
 

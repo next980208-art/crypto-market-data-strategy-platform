@@ -18,16 +18,26 @@ saved JSONL → Kafka → consumer → PyFlink → Parquet → serving API
 
 대표 실행에서는 입력, Kafka producer, consumer, PyFlink 입력, Parquet 저장, API 조회가 모두 1,000건으로 일치했고 중복과 필수값 결측은 0건이었습니다.
 
-## 실행
+## 1분 검증 — Docker 불필요
 
 프로젝트 루트에서 실행합니다.
 
 ```powershell
 pip install -r requirements.txt
+python demo/run_end_to_end_demo.py --verify-snapshot-only
+```
+
+이 명령은 커밋된 입력 1,000건, Parquet 행 수, 단계별 처리 건수, 중복과 필수값 결측을 확인합니다. 외부 API나 거래소 자격 증명을 사용하지 않습니다.
+
+## 전체 E2E 재실행 — Docker 필요
+
+Docker Desktop을 실행한 뒤 다음 명령을 사용합니다.
+
+```powershell
 python demo/run_end_to_end_demo.py
 ```
 
-Docker 서비스를 이미 실행했다면 다음 옵션을 사용할 수 있습니다.
+Kafka와 Flink 서비스를 이미 실행했다면 다음 옵션을 사용할 수 있습니다.
 
 ```powershell
 python demo/run_end_to_end_demo.py --skip-docker-start
