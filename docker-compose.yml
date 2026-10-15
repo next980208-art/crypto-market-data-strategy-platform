@@ -1,0 +1,209 @@
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    profiles: ["streaming"]
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/opt/zookeeper-3.4.13/data
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    profiles: ["streaming"]
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_MS: 259200000
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  flink-staging-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    image: coin_project-flink:2.2.0
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mkdir -p /flink-staging && chmod -R 777 /flink-staging"]
+    volumes:
+      - flink_staging:/flink-staging
+
+  jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    image: coin_project-flink:2.2.0
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        rest.bind-address: 0.0.0.0
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+    volumes:
+      - .:/opt/flink/project
+      - flink_staging:/opt/flink/staging
+
+  taskmanager:
+    image: coin_project-flink:2.2.0
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      jobmanager:
+        condition: service_started
+      flink-staging-init:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["umask 000 && exec /docker-entrypoint.sh taskmanager"]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        python.executable: /usr/bin/python3
+        # Keep one slot for the real-time paper job and one for finite backfill jobs.
+        taskmanager.numberOfTaskSlots: 2
+    volumes:
+      - .:/opt/flink/project
+      - flink_staging:/opt/flink/staging
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    command: standalone
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      jobmanager:
+        condition: service_started
+      taskmanager:
+        condition: service_started
+      flink-staging-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - .:/opt/airflow/project
+      - .:/opt/flink/project
+      - airflow_home:/opt/airflow
+      - flink_staging:/opt/flink/staging
+
+  flink-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["sleep infinity"]
+    depends_on:
+      jobmanager:
+        condition: service_started
+      taskmanager:
+        condition: service_started
+      flink-staging-init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/opt/airflow/project
+      - .:/opt/flink/project
+      - flink_staging:/opt/flink/staging
+
+  realtime-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "realtime.kafka_websocket_collector", "--bootstrap-servers", "kafka:29092"]
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+  realtime-market-archive:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "realtime.market_archive_service", "--bootstrap-servers", "kafka:29092", "--duration-seconds", "0"]
+    depends_on:
+      - kafka
+    restart: "on-failure:5"
+    volumes:
+      - .:/app
+
+  supplementary-market-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "scripts.collect_supplementary_market_data", "--interval-seconds", "300"]
+    restart: "on-failure:5"
+    volumes:
+      - .:/app
+
+  realtime-feature-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "realtime.kafka_feature_worker", "--bootstrap-servers", "kafka:29092"]
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+  realtime-inference:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "realtime.inference_service", "--bootstrap-servers", "kafka:29092", "--consumer-group", "realtime-inference-v3"]
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+  realtime-risk-paper:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    profiles: ["realtime"]
+    command:
+      ["python", "-m", "realtime.risk_paper_service", "--bootstrap-servers", "kafka:29092", "--consumer-group", "realtime-risk-paper-v3"]
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+volumes:
+  airflow_home:
+  flink_staging:
+  kafka_data:
+  zookeeper_data:

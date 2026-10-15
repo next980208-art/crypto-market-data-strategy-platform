@@ -1,0 +1,10 @@
+{
+  "jid": "bc072c4512feba9f02a6ebbf744f3a16",
+  "name": "insert-into_default_catalog.default_database.staged_features",
+  "state": "FINISHED",
+  "start-time": 1788502428631,
+  "end-time": 1788502429019,
+  "duration": 388,
+  "start_time_utc": "2026-09-04T06:13:48.631000+00:00",
+  "end_time_utc": "2026-09-04T06:13:49.019000+00:00"
+}

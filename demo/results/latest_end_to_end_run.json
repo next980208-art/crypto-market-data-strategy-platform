@@ -1,0 +1,40 @@
+{
+  "demo": "저장된 공개 입력부터 Feature Store 조회까지 이어진 실행",
+  "execution_id": "20260904T061333Z",
+  "started_at_utc": "2026-09-04T06:13:33.053884+00:00",
+  "status": "success",
+  "external_api_called": false,
+  "input_source": "demo/input/binance_usdm_btcusdt_1000.jsonl",
+  "input_description": "Previously saved public Binance USDT-M BTCUSDT 1-minute candles",
+  "requested_count": 1000,
+  "pipeline": [
+    "saved_input",
+    "kafka",
+    "consumer",
+    "pyflink",
+    "parquet",
+    "serving_read"
+  ],
+  "completed_at_utc": "2026-09-04T06:13:50.031261+00:00",
+  "total_elapsed_seconds": 16.969,
+  "counts": {
+    "input": 1000,
+    "producer_sent": 1000,
+    "consumer_received": 1000,
+    "pyflink_input": 1000,
+    "parquet_saved": 1000,
+    "serving_read": 1000,
+    "unprocessed": 0
+  },
+  "all_counts_match": true,
+  "topic": "portfolio.market.events.v1.1000.20260904t061337z",
+  "run_id": "capacity-1000-20260904T061337Z",
+  "flink_job_id": "bc072c4512feba9f02a6ebbf744f3a16",
+  "storage_format": "parquet",
+  "parquet_output": "demo/output/latest_features.parquet",
+  "serving_result": "demo/results/latest_serving_response.json",
+  "serving_status": "healthy",
+  "duplicate_timestamps": 0,
+  "missing_required_values": 0,
+  "runtime_report": "runtime_reports/portfolio_demo/20260904T061333Z/pipeline/capacity_test_report.json"
+}

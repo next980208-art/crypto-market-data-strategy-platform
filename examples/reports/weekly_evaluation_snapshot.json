@@ -1,0 +1,327 @@
+{
+  "schema_version": "fixed_observation_weekly_v1",
+  "generated_utc": "2026-10-14T15:10:15.775718+00:00",
+  "observation": {
+    "rule_id": "15m_hold1440_stop1pct_breakout",
+    "status": "collecting",
+    "observed_days": 22.166666666666668,
+    "minimum_observation_days": 90,
+    "review_after_utc": "2026-12-21T11:00:00+00:00",
+    "orders_sent": 0
+  },
+  "quality": {
+    "status": "healthy",
+    "pass_count": 13,
+    "warning_count": 0,
+    "critical_count": 0,
+    "checks": [
+      {
+        "id": "observer_exit",
+        "status": "pass",
+        "message": "Observer completed successfully",
+        "details": {
+          "exit_code": 0
+        }
+      },
+      {
+        "id": "protocol_hash",
+        "status": "pass",
+        "message": "Frozen protocol hash matches state",
+        "details": {
+          "actual": "b43a2245b8133f6cbabd04d1cd4af6178d977ec363173f1f6d06d5e0ccff6c88",
+          "expected": "b43a2245b8133f6cbabd04d1cd4af6178d977ec363173f1f6d06d5e0ccff6c88"
+        }
+      },
+      {
+        "id": "safety_lock",
+        "status": "pass",
+        "message": "No credentials or orders were used",
+        "details": {
+          "orders_sent": 0,
+          "credentials_used": false,
+          "orders_allowed": false
+        }
+      },
+      {
+        "id": "bars_15m.parquet:rows",
+        "status": "pass",
+        "message": "Stored row count matches latest report",
+        "details": {
+          "actual": 2176,
+          "expected": 2176
+        }
+      },
+      {
+        "id": "bars_15m.parquet:continuity",
+        "status": "pass",
+        "message": "15-minute timestamps are contiguous",
+        "details": {
+          "missing_bars": 0,
+          "duplicates": 0,
+          "misaligned": 0
+        }
+      },
+      {
+        "id": "bars_15m.parquet:values",
+        "status": "pass",
+        "message": "OHLCV values are valid",
+        "details": {
+          "null_values": 0,
+          "invalid_ohlcv": 0
+        }
+      },
+      {
+        "id": "mark_15m.parquet:rows",
+        "status": "pass",
+        "message": "Stored row count matches latest report",
+        "details": {
+          "actual": 2176,
+          "expected": 2176
+        }
+      },
+      {
+        "id": "mark_15m.parquet:continuity",
+        "status": "pass",
+        "message": "15-minute timestamps are contiguous",
+        "details": {
+          "missing_bars": 0,
+          "duplicates": 0,
+          "misaligned": 0
+        }
+      },
+      {
+        "id": "mark_15m.parquet:values",
+        "status": "pass",
+        "message": "OHLCV values are valid",
+        "details": {
+          "null_values": 0,
+          "invalid_ohlcv": 0
+        }
+      },
+      {
+        "id": "contract_mark_alignment",
+        "status": "pass",
+        "message": "Contract and mark-price bars are aligned",
+        "details": {
+          "unmatched_timestamps": 0
+        }
+      },
+      {
+        "id": "latest_bar_lag",
+        "status": "pass",
+        "message": "Latest completed bar is current",
+        "details": {
+          "lag_minutes": 10.313366666666667
+        }
+      },
+      {
+        "id": "funding_integrity",
+        "status": "pass",
+        "message": "Funding events are unique and valid",
+        "details": {
+          "rows": 66,
+          "expected": 66,
+          "duplicates": 0,
+          "invalid_rates": 0
+        }
+      },
+      {
+        "id": "storage_limit",
+        "status": "pass",
+        "message": "Observation database is below the warning threshold",
+        "details": {
+          "bytes": 1627008,
+          "limit_bytes": 33554432,
+          "ratio": 0.048488616943359375
+        }
+      }
+    ]
+  },
+  "weekly": {
+    "definition": "Seven-day blocks anchored at observation_start_utc; a week passes only when all cost cases are positive.",
+    "complete_weeks": 3,
+    "positive_weeks": 0,
+    "failed_weeks": 3,
+    "current_week": {
+      "week": 4,
+      "start_utc": "2026-10-13T11:00:00+00:00",
+      "end_utc": "2026-10-20T11:00:00+00:00",
+      "complete": false,
+      "status": "collecting",
+      "all_cost_positive": false,
+      "reasons": [],
+      "costs": {
+        "normal": {
+          "trades": 1,
+          "return_pct": 0.34455890922067134,
+          "positive": true
+        },
+        "stress": {
+          "trades": 1,
+          "return_pct": 0.30936895466981973,
+          "positive": true
+        },
+        "severe": {
+          "trades": 1,
+          "return_pct": 0.24710980431059681,
+          "positive": true
+        }
+      }
+    },
+    "weeks": [
+      {
+        "week": 1,
+        "start_utc": "2026-09-22T11:00:00+00:00",
+        "end_utc": "2026-09-29T11:00:00+00:00",
+        "complete": true,
+        "status": "fail",
+        "all_cost_positive": false,
+        "reasons": [
+          "nonpositive_cost_cases:normal,stress,severe"
+        ],
+        "costs": {
+          "normal": {
+            "trades": 12,
+            "return_pct": -3.4830306782426823,
+            "positive": false
+          },
+          "stress": {
+            "trades": 12,
+            "return_pct": -3.581895953892622,
+            "positive": false
+          },
+          "severe": {
+            "trades": 12,
+            "return_pct": -3.756650617052526,
+            "positive": false
+          }
+        }
+      },
+      {
+        "week": 2,
+        "start_utc": "2026-09-29T11:00:00+00:00",
+        "end_utc": "2026-10-06T11:00:00+00:00",
+        "complete": true,
+        "status": "fail",
+        "all_cost_positive": false,
+        "reasons": [
+          "nonpositive_cost_cases:normal,stress,severe"
+        ],
+        "costs": {
+          "normal": {
+            "trades": 16,
+            "return_pct": -3.0740509063668875,
+            "positive": false
+          },
+          "stress": {
+            "trades": 16,
+            "return_pct": -3.270681842919787,
+            "positive": false
+          },
+          "severe": {
+            "trades": 16,
+            "return_pct": -3.6177948636961554,
+            "positive": false
+          }
+        }
+      },
+      {
+        "week": 3,
+        "start_utc": "2026-10-06T11:00:00+00:00",
+        "end_utc": "2026-10-13T11:00:00+00:00",
+        "complete": true,
+        "status": "fail",
+        "all_cost_positive": false,
+        "reasons": [
+          "nonpositive_cost_cases:normal,stress,severe"
+        ],
+        "costs": {
+          "normal": {
+            "trades": 12,
+            "return_pct": -0.7113663764910849,
+            "positive": false
+          },
+          "stress": {
+            "trades": 12,
+            "return_pct": -0.9293738229340653,
+            "positive": false
+          },
+          "severe": {
+            "trades": 12,
+            "return_pct": -1.3141309172083115,
+            "positive": false
+          }
+        }
+      },
+      {
+        "week": 4,
+        "start_utc": "2026-10-13T11:00:00+00:00",
+        "end_utc": "2026-10-20T11:00:00+00:00",
+        "complete": false,
+        "status": "collecting",
+        "all_cost_positive": false,
+        "reasons": [],
+        "costs": {
+          "normal": {
+            "trades": 1,
+            "return_pct": 0.34455890922067134,
+            "positive": true
+          },
+          "stress": {
+            "trades": 1,
+            "return_pct": 0.30936895466981973,
+            "positive": true
+          },
+          "severe": {
+            "trades": 1,
+            "return_pct": 0.24710980431059681,
+            "positive": true
+          }
+        }
+      }
+    ],
+    "four_week_blocks": []
+  },
+  "monthly": {
+    "definition": "Thirty-day blocks anchored at observation_start_utc.",
+    "periods": [
+      {
+        "period": 1,
+        "start_utc": "2026-09-22T11:00:00+00:00",
+        "end_utc": "2026-10-22T11:00:00+00:00",
+        "complete": false,
+        "trades": 41,
+        "minimum_trades": 20,
+        "status": "collecting",
+        "reasons": []
+      }
+    ]
+  },
+  "current_results": {
+    "normal": {
+      "trades": 41,
+      "return_pct": -6.795452773643673,
+      "max_drawdown_pct": -7.386649166576465
+    },
+    "stress": {
+      "trades": 41,
+      "return_pct": -7.316351816778733,
+      "max_drawdown_pct": -7.669061069243166
+    },
+    "severe": {
+      "trades": 41,
+      "return_pct": -8.231334242416866,
+      "max_drawdown_pct": -8.46173856347604
+    }
+  },
+  "review": {
+    "status": "collecting",
+    "reasons": [
+      "minimum_observation_period_not_reached"
+    ],
+    "decision": "no_trade",
+    "deployment_allowed": false,
+    "orders_allowed": false,
+    "note": "This report never approves live trading automatically."
+  }
+}
